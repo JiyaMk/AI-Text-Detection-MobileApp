@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
 import joblib
 
 # Load the pre-trained unigram models and vectorizer
@@ -12,6 +13,8 @@ lgb_model_bi = joblib.load('bi model pkl/lgb_model.pkl')
 bi_vectorizer = joblib.load('bi model pkl/bi-vectorizer.pkl')
 
 app = Flask(__name__)
+# allow cross-origin requests so mobile apps can call /predict
+CORS(app)
 
 # Route to serve the index.html page
 @app.route('/')
@@ -28,6 +31,30 @@ def predict():
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
+
+    def interpret(prob):
+        """Return label (AI/Human) and a human-friendly confidence level for a probability (0..1)."""
+        if prob is None:
+            return {'label': 'Unknown', 'confidence': 'Unknown'}
+        # label threshold is 0.5
+        label = 'AI-generated' if prob > 0.5 else 'Human-written'
+        # confidence categories (safe, informative -- do not change model logic)
+        if prob >= 0.95:
+            conf = 'Very high confidence'
+        elif prob >= 0.9:
+            conf = 'High confidence'
+        elif prob >= 0.75:
+            conf = 'Likely'
+        elif prob >= 0.6:
+            conf = 'Some evidence'
+        elif prob >= 0.4:
+            conf = 'Uncertain'
+        elif prob >= 0.25:
+            conf = 'Some evidence (human)'
+        else:
+            conf = 'Likely human'
+
+        return {'label': label, 'confidence': conf}
 
     if model_type == 'unigram':
         # Transform the input text using the unigram vectorizer
@@ -49,6 +76,10 @@ def predict():
             'lr_probs_uni': float(lr_probs[0]),
             'combined_probs_uni': float(combined_probs_uni[0])
         }
+        # add human friendly labels and confidence
+        interp = interpret(response['combined_probs_uni'])
+        response['combined_label_uni'] = interp['label']
+        response['combined_confidence_uni'] = interp['confidence']
 
     elif model_type == 'bigram':
         # Transform the input text using the bigram vectorizer
@@ -70,6 +101,10 @@ def predict():
             'lgb_probs_bi': float(lgb_probs[0]),
             'combined_probs_bi': float(combined_probs_bi[0])
         }
+        # add human friendly labels and confidence
+        interp = interpret(response['combined_probs_bi'])
+        response['combined_label_bi'] = interp['label']
+        response['combined_confidence_bi'] = interp['confidence']
 
     else:
         return jsonify({"error": "Invalid model type selected"}), 400
@@ -78,4 +113,5 @@ def predict():
 
 # Start the Flask app
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Listen on all interfaces so mobile devices on the same network can connect
+    app.run(host='0.0.0.0', port=5000, debug=True)
