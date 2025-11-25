@@ -46,7 +46,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, {flex:1, backgroundColor:'#0f1720'}]}>
       <View style={styles.header}>
         <Text style={styles.headerText}>AI Text Detector</Text>
       </View>
@@ -78,21 +78,39 @@ export default function HomeScreen() {
       <View style={styles.outputBox}>
         {loading && <Text style={styles.overlayText}>Detecting...</Text>}
         {!loading && result && (
-          <View style={{paddingHorizontal:12}}>
-            {result.model === 'unigram' ? (
-              <>
-                <Text style={styles.overlayText}>Naive Bayes: {result.nb !== undefined ? (result.nb*100).toFixed(2) + '%' : 'N/A'}</Text>
-                <Text style={styles.overlayText}>Logistic Regression: {result.lr !== undefined ? (result.lr*100).toFixed(2) + '%' : 'N/A'}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.overlayText}>Random Forest: {result.rf !== undefined ? (result.rf*100).toFixed(2) + '%' : 'N/A'}</Text>
-                <Text style={styles.overlayText}>LightGBM: {result.lgb !== undefined ? (result.lgb*100).toFixed(2) + '%' : 'N/A'}</Text>
-              </>
-            )}
-            <Text style={[styles.overlayText, {marginTop:8, fontWeight:'700'}]}>Combined: {result.combined !== null ? (result.combined*100).toFixed(2) + '%' : 'No score'}</Text>
-            <Text style={styles.overlayText}>Label: {result.label || 'N/A'}</Text>
-            <Text style={styles.overlayText}>Confidence: {result.confidence || 'N/A'}</Text>
+          <View style={styles.resultCard}>
+            <View style={styles.resultHeader}>
+              <Text style={styles.resultTitle}>Prediction</Text>
+              <Text style={styles.resultSub}>Model • {result.model}</Text>
+            </View>
+
+            <View style={styles.resultBody}>
+              {result.model === 'unigram' ? (
+                <>
+                  <View style={styles.resultRow}><Text style={styles.small}>Naive Bayes</Text><Text style={styles.prob}>{result.nb !== undefined ? (result.nb*100).toFixed(2) + '%' : 'N/A'}</Text></View>
+                  <View style={styles.resultRow}><Text style={styles.small}>Logistic Regression</Text><Text style={styles.prob}>{result.lr !== undefined ? (result.lr*100).toFixed(2) + '%' : 'N/A'}</Text></View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.resultRow}><Text style={styles.small}>Random Forest</Text><Text style={styles.prob}>{result.rf !== undefined ? (result.rf*100).toFixed(2) + '%' : 'N/A'}</Text></View>
+                  <View style={styles.resultRow}><Text style={styles.small}>LightGBM</Text><Text style={styles.prob}>{result.lgb !== undefined ? (result.lgb*100).toFixed(2) + '%' : 'N/A'}</Text></View>
+                </>
+              )}
+
+              <View style={styles.separator} />
+
+              <Text style={styles.combinedLabel}>Combined</Text>
+              <View style={styles.progressWrap} accessible accessibilityRole="progressbar">
+                <View style={[styles.progressGradient, {width: result.combined ? `${Math.max(2, Math.min(100, result.combined*100))}%` : '2%'}]} />
+              </View>
+
+              <View style={styles.resultRow}><Text style={styles.small}>Score</Text><Text style={styles.bigProb}>{result.combined !== null ? (result.combined*100).toFixed(2) + '%' : 'No score'}</Text></View>
+
+              <View style={styles.metaLine}>
+                <Text style={styles.labelBadge}>{result.label || 'N/A'}</Text>
+                <Text style={[styles.confidence, {marginLeft: 10}]}>{typeof result.confidence === 'number' ? (result.confidence*100).toFixed(2) + '%' : (result.confidence || 'N/A')}</Text>
+              </View>
+            </View>
           </View>
         )}
         {!loading && error && <Text style={[styles.overlayText, { color: 'tomato' }]}>{error}</Text>}
@@ -184,7 +202,8 @@ const styles = StyleSheet.create({
   outputBox: {
     width: '90%',
     marginTop: 18,
-    height: 180,
+    minHeight: 140,
+    paddingVertical: 10,
     backgroundColor: '#000',
     borderRadius: 8,
     alignItems: 'center',
@@ -195,4 +214,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     textAlign: 'center'
   }
+  ,
+  /* result card styles */
+  resultCard: { width: '100%', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  resultTitle: { color: '#e6fff3', fontWeight: '800', fontSize: 15 },
+  resultSub: { color: '#9fbfb0', fontSize: 12 },
+  resultBody: { paddingTop: 6 },
+  resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 6 },
+  small: { fontSize: 14, color: '#c6e9dd' },
+  prob: { fontWeight: '700', color: '#fff' },
+  separator: { height: 1, backgroundColor: 'rgba(255,255,255,0.04)', marginVertical: 8, borderRadius: 2 },
+  combinedLabel: { color: '#e6f7ef', fontWeight: '700', marginBottom: 6 },
+  progressWrap: { width: '100%', height: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 999, overflow: 'hidden' },
+  progressGradient: { height: '100%', backgroundColor: '#0ea37b', borderRadius: 999, width: '30%' },
+  bigProb: { color: '#fff', fontWeight: '800' },
+  metaLine: { marginTop: 8, flexDirection: 'row', alignItems: 'center' },
+  labelBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(14,163,123,0.12)', color: '#0ee0a0', fontWeight: '700' },
+  confidence: { color: '#bfeadd', marginTop: 0, fontSize: 13 },
 });
